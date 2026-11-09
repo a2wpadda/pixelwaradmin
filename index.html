@@ -1,0 +1,2485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pixel War — Admin Console</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3CradialGradient id='g' cx='50%25' cy='50%25' r='50%25'%3E%3Cstop offset='0%25' stop-color='%2338bdf8'/%3E%3Cstop offset='100%25' stop-color='%231e3a8a'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='32' cy='32' r='29' fill='url(%23g)' stroke='%2360a5fa' stroke-width='4'/%3E%3Ccircle cx='32' cy='32' r='16' fill='none' stroke='%23ffffff' stroke-width='4.5'/%3E%3Cpath d='M32 14v36M14 32h36' stroke='%23ffffff' stroke-width='4.5'/%3E%3Ccircle cx='32' cy='32' r='7.5' fill='rgba(251,191,36,0.35)' stroke='%23fbbf24' stroke-width='4'/%3E%3C/svg%3E">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- Firebase Compatibility SDKs (Matching Pixel War Live Backend) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+  <style>
+    :root {
+      --bg-dark: #070d18;
+      --bg-panel: #0c1526;
+      --card-bg: #111a2e;
+      --card-bg-alt: #16223b;
+      --card-border: #2c4268;
+      --card-border-bright: #3b598a;
+      --btn-orange: #ff9d00;
+      --btn-orange-hover: #ffad1f;
+      --btn-orange-shadow: #b45309;
+      --btn-blue: #0284c7;
+      --btn-blue-hover: #0398e3;
+      --btn-blue-shadow: #075985;
+      --accent-cyan: #38bdf8;
+      --accent-gold: #f59e0b;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --accent-purple: #a855f7;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --font-pixel-display: 'Silkscreen', 'Pixelify Sans', monospace;
+      --font-pixel-body: 'Pixelify Sans', 'Silkscreen', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background-color: var(--bg-dark);
+      background-image:
+        radial-gradient(circle at 18% 15%, rgba(2, 132, 199, 0.14) 0%, transparent 45%),
+        radial-gradient(circle at 82% 80%, rgba(245, 158, 11, 0.10) 0%, transparent 45%),
+        linear-gradient(rgba(44, 66, 104, 0.12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(44, 66, 104, 0.12) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 24px 24px, 24px 24px;
+      color: var(--text-main);
+      font-family: var(--font-pixel-body);
+      overflow-x: hidden;
+    }
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #070d18;
+      border-left: 2px solid #1e2c47;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2c4268;
+      border: 2px solid #070d18;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--accent-cyan);
+    }
+
+    .svg-icon {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+      flex-shrink: 0;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .svg-icon-lg {
+      width: 22px;
+      height: 22px;
+      fill: currentColor;
+      flex-shrink: 0;
+    }
+
+    /* =========================================================================
+       SECURITY GATE OVERLAY (NO PASSCODE SHOWN ON SCREEN)
+       ========================================================================= */
+    #admin-gate-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9000;
+      background:
+        radial-gradient(circle at 50% 38%, rgba(17, 26, 46, 0.92), rgba(7, 13, 24, 0.98)),
+        repeating-linear-gradient(0deg, rgba(56, 189, 248, 0.03) 0px, rgba(56, 189, 248, 0.03) 1px, transparent 1px, transparent 24px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .gate-card {
+      width: 100%;
+      max-width: 440px;
+      background: var(--card-bg);
+      border: 3px solid var(--card-border);
+      box-shadow: 0 20px 55px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      padding: 30px 28px;
+      text-align: center;
+      position: relative;
+    }
+
+    .gate-crest {
+      width: 68px;
+      height: 68px;
+      margin: 0 auto 16px;
+      background: linear-gradient(180deg, #0284c7, #1e3a8a);
+      border: 3px solid #7dd3fc;
+      box-shadow: 0 6px 0 #075985, 0 10px 25px rgba(2, 132, 199, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+    }
+
+    .gate-title {
+      font-family: var(--font-pixel-display);
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: 1px;
+      text-shadow: 0 3px 0 #000;
+      margin-bottom: 6px;
+    }
+
+    .gate-subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 22px;
+      line-height: 1.4;
+    }
+
+    .gate-field-label {
+      display: block;
+      text-align: left;
+      font-family: var(--font-pixel-display);
+      font-size: 10px;
+      color: var(--accent-cyan);
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .pixel-input {
+      width: 100%;
+      background: #070d18;
+      border: 3px solid var(--card-border);
+      color: var(--text-main);
+      font-family: var(--font-pixel-body);
+      font-size: 16px;
+      padding: 11px 14px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .pixel-input:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.18);
+    }
+
+    .gate-input {
+      text-align: center;
+      font-family: var(--font-pixel-display);
+      font-size: 20px;
+      letter-spacing: 6px;
+      margin-bottom: 16px;
+    }
+
+    .gate-error {
+      display: none;
+      background: rgba(239, 68, 68, 0.16);
+      border: 2px solid var(--accent-red);
+      color: #fca5a5;
+      font-family: var(--font-pixel-display);
+      font-size: 10px;
+      padding: 10px 12px;
+      margin-bottom: 14px;
+      line-height: 1.45;
+    }
+
+    /* 3D Pixel Buttons matching main game */
+    .pixel-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: var(--font-pixel-display);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      padding: 10px 16px;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      cursor: pointer;
+      color: #ffffff;
+      text-decoration: none;
+      transition: transform 0.08s, filter 0.12s;
+      text-shadow: 0 2px 0 rgba(0, 0, 0, 0.65);
+    }
+
+    .pixel-btn:hover {
+      filter: brightness(1.1);
+    }
+
+    .pixel-btn:active {
+      transform: translateY(2px);
+    }
+
+    .pixel-btn-orange {
+      background: linear-gradient(180deg, #ffb703 0%, #f59e0b 55%, #d97706 100%);
+      border-color: #fde68a;
+      box-shadow: 0 4px 0 #92400e, 0 6px 14px rgba(0, 0, 0, 0.45);
+      color: #1c1917;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+    }
+
+    .pixel-btn-blue {
+      background: linear-gradient(180deg, #38bdf8 0%, #0284c7 55%, #0369a1 100%);
+      border-color: #bae6fd;
+      box-shadow: 0 4px 0 #075985, 0 6px 14px rgba(0, 0, 0, 0.45);
+    }
+
+    .pixel-btn-green {
+      background: linear-gradient(180deg, #34d399 0%, #10b981 55%, #059669 100%);
+      border-color: #a7f3d0;
+      box-shadow: 0 4px 0 #065f46, 0 6px 14px rgba(0, 0, 0, 0.45);
+    }
+
+    .pixel-btn-red {
+      background: linear-gradient(180deg, #f87171 0%, #ef4444 55%, #dc2626 100%);
+      border-color: #fecaca;
+      box-shadow: 0 4px 0 #7f1d1d, 0 6px 14px rgba(0, 0, 0, 0.45);
+    }
+
+    .pixel-btn-slate {
+      background: linear-gradient(180deg, #334155 0%, #1e293b 65%, #0f172a 100%);
+      border-color: #475569;
+      box-shadow: 0 4px 0 #090d16, 0 6px 14px rgba(0, 0, 0, 0.4);
+      color: #e2e8f0;
+    }
+
+    .pixel-btn-sm {
+      font-size: 9.5px;
+      padding: 6px 10px;
+      gap: 5px;
+      box-shadow: 0 3px 0 rgba(0, 0, 0, 0.65);
+    }
+
+    /* =========================================================================
+       MAIN ADMIN APPLICATION SHELL
+       ========================================================================= */
+    #admin-app {
+      display: none;
+      min-height: 100vh;
+      flex-direction: column;
+    }
+
+    /* Top Command Header Bar */
+    .top-bar {
+      background: rgba(12, 21, 38, 0.96);
+      border-bottom: 3px solid var(--card-border);
+      padding: 12px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    }
+
+    .brand-cluster {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-badge {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(180deg, #0284c7, #1e3a8a);
+      border: 2px solid #7dd3fc;
+      box-shadow: 0 3px 0 #075985;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+    }
+
+    .brand-title {
+      font-family: var(--font-pixel-display);
+      font-size: 18px;
+      color: #ffffff;
+      letter-spacing: 0.8px;
+      text-shadow: 0 2px 0 #000;
+    }
+
+    .brand-sub {
+      font-size: 12.5px;
+      color: var(--accent-cyan);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    .rtdb-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.14);
+      border: 2px solid rgba(16, 185, 129, 0.5);
+      color: #34d399;
+      font-family: var(--font-pixel-display);
+      font-size: 9.5px;
+      padding: 5px 10px;
+    }
+
+    .rtdb-pill.offline {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.5);
+      color: #f87171;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background: currentColor;
+      display: inline-block;
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* Main Content Container */
+    .main-container {
+      width: 100%;
+      max-width: 1520px;
+      margin: 0 auto;
+      padding: 20px 22px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Metric Summary Cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 3px solid var(--card-border);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.1s;
+    }
+
+    .stat-card:hover {
+      border-color: var(--accent-cyan);
+      transform: translateY(-2px);
+    }
+
+    .stat-card.active-card {
+      border-color: var(--btn-orange);
+      box-shadow: 0 0 0 2px rgba(255, 157, 0, 0.25), 0 8px 20px rgba(0, 0, 0, 0.45);
+    }
+
+    .stat-label {
+      font-family: var(--font-pixel-display);
+      font-size: 9.5px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-family: var(--font-pixel-display);
+      font-size: 26px;
+      font-weight: 700;
+      color: #ffffff;
+      text-shadow: 0 2px 0 #000;
+    }
+
+    .stat-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .stat-icon-box {
+      width: 46px;
+      height: 46px;
+      border: 2px solid var(--card-border-bright);
+      background: #070d18;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* Navigation Tabs */
+    .section-tabs {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      background: var(--bg-panel);
+      border: 3px solid var(--card-border);
+      padding: 10px 14px;
+    }
+
+    .tab-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .nav-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #070d18;
+      border: 2px solid var(--card-border);
+      color: var(--text-muted);
+      font-family: var(--font-pixel-display);
+      font-size: 10.5px;
+      padding: 9px 14px;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .nav-tab:hover {
+      color: #ffffff;
+      border-color: var(--accent-cyan);
+    }
+
+    .nav-tab.active {
+      background: linear-gradient(180deg, #0284c7, #1e3a8a);
+      border-color: #7dd3fc;
+      color: #ffffff;
+      box-shadow: 0 3px 0 #075985;
+    }
+
+    .tab-count {
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 1px 6px;
+      font-size: 9.5px;
+      color: #f8fafc;
+    }
+
+    /* Workspace Panels */
+    .workspace-panel {
+      background: var(--card-bg);
+      border: 3px solid var(--card-border);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-header {
+      padding: 16px 20px;
+      background: var(--bg-panel);
+      border-bottom: 3px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .panel-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .panel-title {
+      font-family: var(--font-pixel-display);
+      font-size: 14px;
+      color: #ffffff;
+      letter-spacing: 0.6px;
+    }
+
+    /* Filter & Search Bar */
+    .controls-bar {
+      padding: 14px 20px;
+      background: #0a1222;
+      border-bottom: 2px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .search-box {
+      position: relative;
+      flex: 1;
+      min-width: 260px;
+      max-width: 500px;
+    }
+
+    .search-box .search-svg {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .search-input {
+      width: 100%;
+      background: #070d18;
+      border: 2px solid var(--card-border);
+      color: #ffffff;
+      font-family: var(--font-pixel-body);
+      font-size: 15px;
+      padding: 9px 14px 9px 38px;
+      outline: none;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-cyan);
+    }
+
+    .filter-pills {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .filter-pill {
+      background: #070d18;
+      border: 2px solid var(--card-border);
+      color: var(--text-muted);
+      font-family: var(--font-pixel-display);
+      font-size: 9.5px;
+      padding: 7px 11px;
+      cursor: pointer;
+    }
+
+    .filter-pill:hover {
+      color: #ffffff;
+      border-color: #60a5fa;
+    }
+
+    .filter-pill.active {
+      background: rgba(56, 189, 248, 0.18);
+      border-color: var(--accent-cyan);
+      color: #ffffff;
+    }
+
+    .pixel-select {
+      background: #070d18;
+      border: 2px solid var(--card-border);
+      color: #ffffff;
+      font-family: var(--font-pixel-display);
+      font-size: 9.5px;
+      padding: 7px 10px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* Scrollable Player Roster Table */
+    .table-scroll-container {
+      width: 100%;
+      max-height: 620px;
+      overflow-y: auto;
+      overflow-x: auto;
+      background: #080f1d;
+    }
+
+    .roster-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+    }
+
+    .roster-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: #0d172a;
+      border-bottom: 3px solid var(--card-border);
+      padding: 12px 14px;
+      text-align: left;
+      font-family: var(--font-pixel-display);
+      font-size: 9.5px;
+      color: var(--accent-cyan);
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .roster-table tbody tr {
+      border-bottom: 1px solid rgba(44, 66, 104, 0.45);
+      transition: background 0.1s;
+    }
+
+    .roster-table tbody tr:hover {
+      background: rgba(56, 189, 248, 0.06);
+    }
+
+    .roster-table tbody tr.row-banned {
+      background: rgba(239, 68, 68, 0.08);
+    }
+
+    .roster-table tbody tr.row-suspended {
+      background: rgba(245, 158, 11, 0.08);
+    }
+
+    .roster-table tbody tr.row-flagged {
+      background: rgba(168, 85, 247, 0.08);
+    }
+
+    .roster-table td {
+      padding: 12px 14px;
+      vertical-align: middle;
+      font-size: 14px;
+    }
+
+    .commander-cell {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .commander-avatar {
+      width: 38px;
+      height: 38px;
+      border: 2px solid #7dd3fc;
+      background: #0284c7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-pixel-display);
+      font-size: 13px;
+      color: #ffffff;
+      flex-shrink: 0;
+      position: relative;
+      text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6);
+    }
+
+    .online-indicator {
+      position: absolute;
+      bottom: -3px;
+      right: -3px;
+      width: 11px;
+      height: 11px;
+      border: 2px solid #070d18;
+      background: #475569;
+    }
+
+    .online-indicator.is-online {
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    .commander-name {
+      font-family: var(--font-pixel-display);
+      font-size: 12.5px;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .commander-id {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Status Badges */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-family: var(--font-pixel-display);
+      font-size: 9px;
+      padding: 4px 8px;
+      border: 2px solid;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .badge-online {
+      background: rgba(16, 185, 129, 0.16);
+      border-color: #10b981;
+      color: #34d399;
+    }
+
+    .badge-active {
+      background: rgba(56, 189, 248, 0.14);
+      border-color: #0284c7;
+      color: #7dd3fc;
+    }
+
+    .badge-banned {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: #ef4444;
+      color: #fca5a5;
+    }
+
+    .badge-suspended {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: #f59e0b;
+      color: #fde68a;
+    }
+
+    .badge-flagged {
+      background: rgba(168, 85, 247, 0.2);
+      border-color: #a855f7;
+      color: #e9d5ff;
+    }
+
+    .level-pill {
+      display: inline-block;
+      font-family: var(--font-pixel-display);
+      font-size: 10.5px;
+      background: #111a2e;
+      border: 2px solid #3b598a;
+      color: #38bdf8;
+      padding: 3px 8px;
+    }
+
+    .res-cluster {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: var(--font-pixel-display);
+      font-size: 11px;
+    }
+
+    .res-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .action-cluster {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    /* Empty State */
+    .empty-state {
+      padding: 48px 20px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    .empty-state-title {
+      font-family: var(--font-pixel-display);
+      font-size: 13px;
+      color: #ffffff;
+      margin-bottom: 6px;
+    }
+
+    /* Two-Column Grid for Moderation & Logs */
+    .two-col-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      gap: 20px;
+    }
+
+    .ban-card-list {
+      max-height: 460px;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .ban-item-card {
+      background: #0a1222;
+      border: 2px solid rgba(239, 68, 68, 0.5);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .ban-item-card.is-suspended {
+      border-color: rgba(245, 158, 11, 0.55);
+    }
+
+    /* Modals */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 5000;
+      background: rgba(4, 8, 16, 0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+
+    .modal-box {
+      width: 100%;
+      max-width: 520px;
+      background: var(--card-bg);
+      border: 3px solid var(--card-border-bright);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
+      overflow: hidden;
+    }
+
+    .modal-head {
+      padding: 14px 18px;
+      background: var(--bg-panel);
+      border-bottom: 3px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-head-title {
+      font-family: var(--font-pixel-display);
+      font-size: 13px;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-body {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .modal-foot {
+      padding: 12px 18px;
+      background: var(--bg-panel);
+      border-top: 2px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .form-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .form-label {
+      font-family: var(--font-pixel-display);
+      font-size: 9.5px;
+      color: var(--accent-cyan);
+      text-transform: uppercase;
+    }
+
+    /* Toast Notification */
+    #toast-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 9500;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toast-msg {
+      background: #0c1526;
+      border: 3px solid var(--accent-cyan);
+      color: #ffffff;
+      padding: 12px 16px;
+      font-family: var(--font-pixel-display);
+      font-size: 10.5px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.75);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: 400px;
+    }
+
+    .word-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #070d18;
+      border: 2px solid var(--card-border);
+      padding: 5px 10px;
+      font-family: var(--font-pixel-display);
+      font-size: 9.5px;
+      color: #e2e8f0;
+    }
+
+    .word-tag button {
+      background: none;
+      border: none;
+      color: #f87171;
+      cursor: pointer;
+      font-family: var(--font-pixel-display);
+      font-size: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =========================================================================
+       1. SECURITY GATE (PASSCODE VERIFICATION - NO VISIBLE PASSCODE HINT)
+       ========================================================================= -->
+  <div id="admin-gate-overlay">
+    <div class="gate-card">
+      <div class="gate-crest">
+        <svg class="svg-icon-lg" style="width:34px;height:34px;" viewBox="0 0 24 24">
+          <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm0 4.5l4 1.5v4.1c0 3.32-2.13 6.43-4 7.32-1.87-.89-4-4-4-7.32V8l4-1.5z"/>
+        </svg>
+      </div>
+      <div class="gate-title">PIXEL WAR COMMAND</div>
+      <div class="gate-subtitle">Restricted Administration &amp; Live Player Moderation Console</div>
+
+      <div id="gate-error-box" class="gate-error">ACCESS DENIED: Invalid authorization code.</div>
+
+      <label class="gate-field-label" for="gate-passcode-input">Authorization Access Code</label>
+      <input type="password" id="gate-passcode-input" class="pixel-input gate-input" placeholder="••••••" autocomplete="off">
+
+      <button type="button" id="btn-gate-unlock" class="pixel-btn pixel-btn-orange" style="width:100%; padding:13px; font-size:12px;">
+        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6zm9 14H6V10h12v10zm-6-3c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"/></svg>
+        <span>Authorize Terminal</span>
+      </button>
+
+      <div style="margin-top:18px; padding-top:14px; border-top:2px solid #1e2c47; display:flex; justify-content:center;">
+        <a href="https://a2wpadda.github.io/pixelwar/" class="pixel-btn pixel-btn-slate pixel-btn-sm">
+          <svg class="svg-icon" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+          <span>Return to Pixel War</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       2. MAIN COMMAND CONSOLE
+       ========================================================================= -->
+  <div id="admin-app">
+    <header class="top-bar">
+      <div class="brand-cluster">
+        <div class="brand-badge">
+          <svg class="svg-icon-lg" viewBox="0 0 24 24">
+            <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm-1 14.5v-9l6 4.5-6 4.5z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">PIXEL WAR ADMIN TERMINAL</div>
+          <div class="brand-sub">
+            <span>Firebase Realtime Database: pixel-war-firebase</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <div id="rtdb-status-pill" class="rtdb-pill">
+          <span class="pulse-dot"></span>
+          <span id="rtdb-status-text">CONNECTING TO CLOUD...</span>
+        </div>
+
+        <button type="button" id="btn-direct-ban-open" class="pixel-btn pixel-btn-red">
+          <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-4.42 3.58-8 8-8 1.85 0 3.55.63 4.9 1.69L5.69 16.9C4.63 15.55 4 13.85 4 12zm8 8c-1.85 0-3.55-.63-4.9-1.69L18.31 7.1C19.37 8.45 20 10.15 20 12c0 4.42-3.58 8-8 8z"/></svg>
+          <span>Ban Username</span>
+        </button>
+
+        <button type="button" id="btn-refresh-cloud" class="pixel-btn pixel-btn-blue">
+          <svg class="svg-icon" viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+          <span>Sync Cloud</span>
+        </button>
+
+        <a href="https://a2wpadda.github.io/pixelwar/" target="_blank" rel="noopener" class="pixel-btn pixel-btn-orange">
+          <svg class="svg-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          <span>Launch Game</span>
+        </a>
+
+        <button type="button" id="btn-lock-console" class="pixel-btn pixel-btn-slate">
+          <svg class="svg-icon" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6z"/></svg>
+          <span>Lock</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="main-container">
+      <!-- KPI Summary Cards (Click to Filter Roster) -->
+      <section class="stats-grid">
+        <div class="stat-card active-card" data-quick-filter="all">
+          <div>
+            <div class="stat-label">Total Commanders</div>
+            <div class="stat-value" id="kpi-total-players">0</div>
+            <div class="stat-sub">Registered in Cloud &amp; Directory</div>
+          </div>
+          <div class="stat-icon-box" style="color:var(--accent-cyan);">
+            <svg class="svg-icon-lg" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+          </div>
+        </div>
+
+        <div class="stat-card" data-quick-filter="online">
+          <div>
+            <div class="stat-label">Online Right Now</div>
+            <div class="stat-value" id="kpi-online-players" style="color:var(--accent-green);">0</div>
+            <div class="stat-sub">Live Presence Heartbeat</div>
+          </div>
+          <div class="stat-icon-box" style="color:var(--accent-green);">
+            <svg class="svg-icon-lg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          </div>
+        </div>
+
+        <div class="stat-card" data-quick-filter="active">
+          <div>
+            <div class="stat-label">Active Standing</div>
+            <div class="stat-value" id="kpi-active-players" style="color:#38bdf8;">0</div>
+            <div class="stat-sub">Unrestricted Accounts</div>
+          </div>
+          <div class="stat-icon-box" style="color:#38bdf8;">
+            <svg class="svg-icon-lg" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+          </div>
+        </div>
+
+        <div class="stat-card" data-quick-filter="banned_suspended">
+          <div>
+            <div class="stat-label">Banned &amp; Suspended</div>
+            <div class="stat-value" id="kpi-banned-players" style="color:var(--accent-red);">0</div>
+            <div class="stat-sub">Enforced Across All Devices</div>
+          </div>
+          <div class="stat-icon-box" style="color:var(--accent-red);">
+            <svg class="svg-icon-lg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg>
+          </div>
+        </div>
+
+        <div class="stat-card" data-quick-filter="flagged">
+          <div>
+            <div class="stat-label">Flagged Usernames</div>
+            <div class="stat-value" id="kpi-flagged-players" style="color:var(--accent-gold);">0</div>
+            <div class="stat-sub">Inappropriate Name Matches</div>
+          </div>
+          <div class="stat-icon-box" style="color:var(--accent-gold);">
+            <svg class="svg-icon-lg" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+          </div>
+        </div>
+      </section>
+
+      <!-- Workspace View Switcher -->
+      <nav class="section-tabs">
+        <div class="tab-group">
+          <button type="button" class="nav-tab active" data-view-tab="roster">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+            <span>All Players &amp; Moderation</span>
+            <span class="tab-count" id="tab-count-all">0</span>
+          </button>
+
+          <button type="button" class="nav-tab" data-view-tab="bans">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg>
+            <span>Banned &amp; Suspended List</span>
+            <span class="tab-count" id="tab-count-bans">0</span>
+          </button>
+
+          <button type="button" class="nav-tab" data-view-tab="filter">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+            <span>Name Filter &amp; Audit Logs</span>
+          </button>
+        </div>
+
+        <div style="font-size:12.5px; color:var(--text-muted);">
+          Showing <strong id="visible-roster-count" style="color:#fff;">0</strong> of <strong id="total-roster-count" style="color:#fff;">0</strong> accounts
+        </div>
+      </nav>
+
+      <!-- =========================================================================
+           VIEW 1: COMPLETE SCROLLABLE & SEARCHABLE PLAYER ROSTER
+           ========================================================================= -->
+      <section id="view-roster" class="workspace-panel">
+        <div class="panel-header">
+          <div class="panel-title-wrap">
+            <svg class="svg-icon-lg" style="color:var(--accent-cyan);" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+            <div>
+              <div class="panel-title">LIVE PLAYER DIRECTORY &amp; ACCOUNT CONTROL</div>
+              <div style="font-size:12px; color:var(--text-muted);">Scroll, search, reset stats, edit levels, rename inappropriate accounts, or ban/suspend players in real time.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls-bar">
+          <div class="search-box">
+            <svg class="svg-icon search-svg" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <input type="text" id="roster-search-input" class="search-input" placeholder="Search by username, account ID, email, or ban reason...">
+          </div>
+
+          <div class="filter-pills" id="roster-filter-pills">
+            <button type="button" class="filter-pill active" data-filter="all">All Players</button>
+            <button type="button" class="filter-pill" data-filter="online">Online Now</button>
+            <button type="button" class="filter-pill" data-filter="active">Active</button>
+            <button type="button" class="filter-pill" data-filter="banned_suspended">Banned / Suspended</button>
+            <button type="button" class="filter-pill" data-filter="banned">Banned Only</button>
+            <button type="button" class="filter-pill" data-filter="suspended">Suspended Only</button>
+            <button type="button" class="filter-pill" data-filter="flagged">Inappropriate Name</button>
+          </div>
+
+          <select id="roster-sort-select" class="pixel-select" aria-label="Sort players">
+            <option value="recent">Sort: Last Active</option>
+            <option value="level_desc">Sort: Highest Level</option>
+            <option value="stars_desc">Sort: Most Stars</option>
+            <option value="wins_desc">Sort: Most Wins</option>
+            <option value="name_asc">Sort: Username (A-Z)</option>
+          </select>
+        </div>
+
+        <div class="table-scroll-container">
+          <table class="roster-table">
+            <thead>
+              <tr>
+                <th>Commander</th>
+                <th>Standing / Status</th>
+                <th>Level &amp; XP</th>
+                <th>Resources</th>
+                <th>Battle Record</th>
+                <th>Last Seen</th>
+                <th>Moderation Actions</th>
+              </tr>
+            </thead>
+            <tbody id="roster-tbody">
+              <tr>
+                <td colspan="7" class="empty-state">
+                  <div class="empty-state-title">Loading Live Player Roster from Firebase Realtime Database...</div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- =========================================================================
+           VIEW 2: DEDICATED BANNED & SUSPENDED ACCOUNTS REGISTRY
+           ========================================================================= -->
+      <section id="view-bans" class="workspace-panel" style="display:none;">
+        <div class="panel-header">
+          <div class="panel-title-wrap">
+            <svg class="svg-icon-lg" style="color:var(--accent-red);" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg>
+            <div>
+              <div class="panel-title">BANNED &amp; SUSPENDED COMMANDERS REGISTRY</div>
+              <div style="font-size:12px; color:var(--text-muted);">Every banned or suspended player is listed below. Restoring an account immediately grants access back in Pixel War.</div>
+            </div>
+          </div>
+
+          <button type="button" id="btn-ban-modal-from-tab" class="pixel-btn pixel-btn-red pixel-btn-sm">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            <span>Add Ban / Suspension</span>
+          </button>
+        </div>
+
+        <div id="banned-registry-list" class="ban-card-list"></div>
+      </section>
+
+      <!-- =========================================================================
+           VIEW 3: INAPPROPRIATE NAME FILTER & MODERATION AUDIT LOGS
+           ========================================================================= -->
+      <section id="view-filter" class="two-col-grid" style="display:none;">
+        <div class="workspace-panel">
+          <div class="panel-header">
+            <div class="panel-title-wrap">
+              <svg class="svg-icon-lg" style="color:var(--accent-gold);" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+              <div>
+                <div class="panel-title">PROHIBITED USERNAME FILTER</div>
+                <div style="font-size:12px; color:var(--text-muted);">Automatically flags accounts whose usernames match these blocked terms.</div>
+              </div>
+            </div>
+          </div>
+          <div style="padding:18px; display:flex; flex-direction:column; gap:14px;">
+            <div style="display:flex; gap:8px;">
+              <input type="text" id="new-badword-input" class="pixel-input" placeholder="Add blocked word or phrase..." style="font-size:14px; padding:9px 12px;">
+              <button type="button" id="btn-add-badword" class="pixel-btn pixel-btn-orange">Add Term</button>
+            </div>
+            <div id="badwords-tag-list" style="display:flex; flex-wrap:wrap; gap:8px; max-height:300px; overflow-y:auto; padding:4px;"></div>
+          </div>
+        </div>
+
+        <div class="workspace-panel">
+          <div class="panel-header">
+            <div class="panel-title-wrap">
+              <svg class="svg-icon-lg" style="color:var(--accent-cyan);" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+              <div>
+                <div class="panel-title">LIVE MODERATION AUDIT LOG</div>
+                <div style="font-size:12px; color:var(--text-muted);">Synced to Firebase Realtime Database</div>
+              </div>
+            </div>
+            <button type="button" id="btn-clear-logs" class="pixel-btn pixel-btn-slate pixel-btn-sm">Clear Log</button>
+          </div>
+          <div id="audit-log-list" class="ban-card-list"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 1: BAN OR SUSPEND ACCOUNT
+       ========================================================================= -->
+  <div id="modal-ban" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-head">
+        <div class="modal-head-title">
+          <svg class="svg-icon" style="color:var(--accent-red);" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg>
+          <span id="ban-modal-title">BAN OR SUSPEND COMMANDER</span>
+        </div>
+        <button type="button" class="pixel-btn pixel-btn-slate pixel-btn-sm" data-close-modal="modal-ban">Close</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label class="form-label" for="ban-target-username">Target Username / Account ID</label>
+          <input type="text" id="ban-target-username" class="pixel-input" placeholder="Enter Commander username...">
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-row">
+            <label class="form-label" for="ban-action-type">Restriction Type</label>
+            <select id="ban-action-type" class="pixel-select" style="padding:11px;">
+              <option value="banned">Permanent Ban (Blocked Indefinitely)</option>
+              <option value="suspended_1h">Suspend — 1 Hour</option>
+              <option value="suspended_24h">Suspend — 24 Hours</option>
+              <option value="suspended_7d">Suspend — 7 Days</option>
+              <option value="suspended_30d">Suspend — 30 Days</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <label class="form-label" for="ban-reason-preset">Violation Category</label>
+            <select id="ban-reason-preset" class="pixel-select" style="padding:11px;">
+              <option value="Inappropriate or Offensive Username">Inappropriate Username</option>
+              <option value="Cheating / Stat Manipulation">Cheating / Exploits</option>
+              <option value="Harassment or Griefing">Harassment / Griefing</option>
+              <option value="Terms of Service Violation">Terms of Service Violation</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label" for="ban-custom-reason">Detailed Ban / Suspension Note (Shown to Player)</label>
+          <input type="text" id="ban-custom-reason" class="pixel-input" placeholder="Inappropriate or Offensive Username">
+        </div>
+
+        <label style="display:flex; align-items:center; gap:10px; font-size:14px; color:#fca5a5; cursor:pointer;">
+          <input type="checkbox" id="ban-also-wipe" style="width:18px; height:18px;">
+          <span>Also reset this account's Stars, Diamonds, Wins, and Level to 0/Lv.1</span>
+        </label>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="pixel-btn pixel-btn-slate" data-close-modal="modal-ban">Cancel</button>
+        <button type="button" id="btn-confirm-ban" class="pixel-btn pixel-btn-red">
+          <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg>
+          <span>Enforce Restriction</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 2: RESET ACCOUNT (STATS WIPE & PASSWORD OVERRIDE)
+       ========================================================================= -->
+  <div id="modal-reset" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-head">
+        <div class="modal-head-title">
+          <svg class="svg-icon" style="color:var(--accent-gold);" viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+          <span>RESET COMMANDER ACCOUNT</span>
+        </div>
+        <button type="button" class="pixel-btn pixel-btn-slate pixel-btn-sm" data-close-modal="modal-reset">Close</button>
+      </div>
+      <div class="modal-body">
+        <div style="background:#070d18; border:2px solid var(--card-border); padding:12px;">
+          <div style="font-size:12px; color:var(--text-muted);">Target Commander</div>
+          <div id="reset-target-display" style="font-family:var(--font-pixel-display); font-size:15px; color:#ffffff; margin-top:4px;">—</div>
+        </div>
+
+        <label style="display:flex; align-items:center; gap:10px; font-size:14.5px; color:#ffffff; cursor:pointer;">
+          <input type="checkbox" id="reset-wipe-progression" checked style="width:18px; height:18px;">
+          <span>Reset Progression to Starter Default (Level 1, 0 XP, 0 Stars, 0 Diamonds, 0 Wins/Losses, Lv.1 Upgrades)</span>
+        </label>
+
+        <div class="form-row" style="margin-top:4px;">
+          <label class="form-label" for="reset-new-password">Assign New Password Override (Optional — Leave Blank to Keep Current)</label>
+          <input type="text" id="reset-new-password" class="pixel-input" placeholder="e.g. Pixel123 (Player will sign in with this password)">
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="pixel-btn pixel-btn-slate" data-close-modal="modal-reset">Cancel</button>
+        <button type="button" id="btn-confirm-reset" class="pixel-btn pixel-btn-orange">
+          <svg class="svg-icon" viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>
+          <span>Execute Account Reset</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 3: EDIT COMMANDER STATS / RESOURCES / RENAME
+       ========================================================================= -->
+  <div id="modal-edit" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-head">
+        <div class="modal-head-title">
+          <svg class="svg-icon" style="color:var(--accent-cyan);" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          <span>EDIT COMMANDER STATS &amp; CALLSIGN</span>
+        </div>
+        <button type="button" class="pixel-btn pixel-btn-slate pixel-btn-sm" data-close-modal="modal-edit">Close</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label class="form-label" for="edit-username-input">Commander Display Username (Change to Force Rename)</label>
+          <input type="text" id="edit-username-input" class="pixel-input">
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-row">
+            <label class="form-label" for="edit-level-input">Player Level</label>
+            <input type="number" id="edit-level-input" class="pixel-input" min="1" max="999">
+          </div>
+          <div class="form-row">
+            <label class="form-label" for="edit-xp-input">Current XP</label>
+            <input type="number" id="edit-xp-input" class="pixel-input" min="0">
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-row">
+            <label class="form-label" for="edit-stars-input">Stars Balance</label>
+            <input type="number" id="edit-stars-input" class="pixel-input" min="0">
+          </div>
+          <div class="form-row">
+            <label class="form-label" for="edit-diamonds-input">Diamonds Balance</label>
+            <input type="number" id="edit-diamonds-input" class="pixel-input" min="0">
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-row">
+            <label class="form-label" for="edit-wins-input">Total Wins</label>
+            <input type="number" id="edit-wins-input" class="pixel-input" min="0">
+          </div>
+          <div class="form-row">
+            <label class="form-label" for="edit-losses-input">Total Losses</label>
+            <input type="number" id="edit-losses-input" class="pixel-input" min="0">
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot" style="justify-content:space-between;">
+        <button type="button" id="btn-delete-account" class="pixel-btn pixel-btn-red pixel-btn-sm">
+          <svg class="svg-icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+          <span>Remove Account</span>
+        </button>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="pixel-btn pixel-btn-slate" data-close-modal="modal-edit">Cancel</button>
+          <button type="button" id="btn-save-edit" class="pixel-btn pixel-btn-blue">Save to Cloud</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <!-- =========================================================================
+       3. LIVE FIREBASE REALTIME DATABASE ADMIN ENGINE
+       ========================================================================= -->
+  <script>
+    (function() {
+      const firebaseConfig = {
+        apiKey: "AIzaSyBLNc9jb4WTxMIZW4UVIKe4lcjhDJXQuFI",
+        authDomain: "pixel-war-firebase.firebaseapp.com",
+        databaseURL: "https://pixel-war-firebase-default-rtdb.firebaseio.com",
+        projectId: "pixel-war-firebase",
+        storageBucket: "pixel-war-firebase.firebasestorage.app",
+        messagingSenderId: "73476637581",
+        appId: "1:73476637581:web:c015f218b4a0f1ec7233c4",
+        measurementId: "G-KJQZNDT98Y"
+      };
+
+      const ADMIN_CODE = "551515";
+      const SESSION_UNLOCK_KEY = "pixelwar_admin_session_unlocked_v3";
+
+      const DEFAULT_BAD_WORDS = [
+        "fuck", "shit", "bitch", "asshole", "cunt", "dick", "pussy", "cock", "bastard",
+        "nigger", "nigga", "faggot", "fag", "retard", "slut", "whore", "nazi", "hitler",
+        "kys", "rape", "rapist", "pedo", "porn", "sex", "penis", "vagina", "boobs", "cum"
+      ];
+
+      let rtdb = null;
+      let isConnected = false;
+
+      // Live Cloud State Maps
+      let cloudAccountsMap = {};
+      let cloudDirectoryMap = {};
+      let cloudPresenceMap = {};
+      let cloudBansMap = {};
+      let cloudAuditLogs = [];
+      let badWordsList = [...DEFAULT_BAD_WORDS];
+
+      // UI Filter & Modal State
+      let currentFilter = "all";
+      let currentSearch = "";
+      let currentSort = "recent";
+      let activeModalCleanId = "";
+
+      function toCleanId(str) {
+        return String(str || "").toLowerCase().replace(/[^a-z0-9_]/g, "");
+      }
+
+      function escapeHtml(str) {
+        return String(str || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function showToast(message, borderColor) {
+        const container = document.getElementById("toast-container");
+        if (!container) return;
+        const el = document.createElement("div");
+        el.className = "toast-msg";
+        if (borderColor) el.style.borderColor = borderColor;
+        el.innerHTML = `
+          <svg class="svg-icon" style="color:${borderColor || 'var(--accent-cyan)'};" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+          </svg>
+          <span>${escapeHtml(message)}</span>
+        `;
+        container.appendChild(el);
+        setTimeout(() => {
+          el.remove();
+        }, 3600);
+      }
+
+      function checkNameFlagged(username) {
+        if (!username) return { isFlagged: false, matches: [] };
+        const raw = String(username).toLowerCase();
+        const norm = raw
+          .replace(/0/g, "o")
+          .replace(/1/g, "i")
+          .replace(/3/g, "e")
+          .replace(/4/g, "a")
+          .replace(/5/g, "s")
+          .replace(/7/g, "t")
+          .replace(/[^a-z0-9]/g, "");
+        const matches = [];
+        for (const w of badWordsList) {
+          const cleanW = String(w || "").toLowerCase().trim();
+          if (!cleanW) continue;
+          if (raw.includes(cleanW) || norm.includes(cleanW)) {
+            matches.push(cleanW);
+          }
+        }
+        return { isFlagged: matches.length > 0, matches: Array.from(new Set(matches)) };
+      }
+
+      function formatTimeAgo(ts) {
+        const num = Number(ts || 0);
+        if (!num) return "Unknown";
+        const diffSec = Math.max(0, Math.floor((Date.now() - num) / 1000));
+        if (diffSec < 45) return "Just now";
+        if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+        if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+        return `${Math.floor(diffSec / 86400)}d ago`;
+      }
+
+      function formatRemainingTime(untilTs) {
+        const num = Number(untilTs || 0);
+        if (!num) return "Permanent";
+        const remMs = num - Date.now();
+        if (remMs <= 0) return "Expired";
+        const hours = Math.ceil(remMs / 3600000);
+        if (hours < 24) return `${hours}h remaining`;
+        return `${Math.ceil(hours / 24)}d remaining`;
+      }
+
+      /* =========================================================================
+         BUILD UNIFIED PLAYER LIST FROM ALL FIREBASE RTDB NODES + LOCALSTORAGE
+         ========================================================================= */
+      function getUnifiedPlayers() {
+        const allIds = new Set();
+
+        Object.keys(cloudAccountsMap || {}).forEach(k => allIds.add(toCleanId(k)));
+        Object.keys(cloudDirectoryMap || {}).forEach(k => allIds.add(toCleanId(k)));
+        Object.keys(cloudPresenceMap || {}).forEach(k => allIds.add(toCleanId(k)));
+        Object.keys(cloudBansMap || {}).forEach(k => allIds.add(toCleanId(k)));
+
+        // Also include any local accounts stored on this browser
+        try {
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith("pixelwar_acct_")) {
+              const cid = toCleanId(key.replace("pixelwar_acct_", ""));
+              if (cid) allIds.add(cid);
+            }
+          }
+        } catch (e) {}
+
+        const now = Date.now();
+        const unified = [];
+
+        allIds.forEach(cleanId => {
+          if (!cleanId) return;
+          const acc = cloudAccountsMap[cleanId] || {};
+          const dir = cloudDirectoryMap[cleanId] || {};
+          const pres = cloudPresenceMap[cleanId] || null;
+          const ban = cloudBansMap[cleanId] || null;
+
+          let localAcc = {};
+          try {
+            const rawLocal = localStorage.getItem("pixelwar_acct_" + cleanId);
+            if (rawLocal) localAcc = JSON.parse(rawLocal) || {};
+          } catch (e) {}
+
+          const username = acc.username || dir.username || pres?.username || ban?.username || localAcc.username || cleanId;
+          const level = Math.max(1, Number(acc.playerLevel ?? dir.level ?? pres?.level ?? localAcc.playerLevel ?? 1));
+          const xp = Math.max(0, Number(acc.xp ?? localAcc.xp ?? 0));
+          const stars = Math.max(0, Number(acc.stars ?? localAcc.stars ?? 0));
+          const diamonds = Math.max(0, Number(acc.diamonds ?? localAcc.diamonds ?? 0));
+          const wins = Math.max(0, Number(acc.wins ?? localAcc.wins ?? 0));
+          const losses = Math.max(0, Number(acc.losses ?? localAcc.losses ?? 0));
+          const lastSeen = Math.max(
+            Number(pres?.lastSeen || 0),
+            Number(dir.lastSeen || 0),
+            Number(acc.updatedAt || 0),
+            Number(ban?.bannedAt || 0)
+          );
+
+          // Online if presence exists and was seen within the last 5 minutes
+          const isOnline = Boolean(pres && (!pres.lastSeen || (now - Number(pres.lastSeen)) < 300000));
+
+          // Determine Ban / Suspension Status
+          let status = "active";
+          let banReason = "";
+          let bannedUntil = null;
+          let bannedAt = null;
+
+          const activeBanNode = (ban && (ban.isBanned || ban.status === "banned" || ban.status === "suspended")) ? ban : null;
+          const activeAccBan = (acc.status === "banned" || acc.status === "suspended" || acc.banned === true) ? acc : null;
+
+          if (activeBanNode) {
+            const until = Number(activeBanNode.bannedUntil || 0);
+            if (!until || until > now) {
+              status = activeBanNode.status === "suspended" ? "suspended" : "banned";
+              banReason = activeBanNode.reason || "Violation of Community Guidelines";
+              bannedUntil = until || null;
+              bannedAt = activeBanNode.bannedAt || null;
+            }
+          } else if (activeAccBan) {
+            const until = Number(activeAccBan.bannedUntil || 0);
+            if (!until || until > now) {
+              status = activeAccBan.status === "suspended" ? "suspended" : "banned";
+              banReason = activeAccBan.banReason || "Violation of Community Guidelines";
+              bannedUntil = until || null;
+              bannedAt = activeAccBan.bannedAt || null;
+            }
+          }
+
+          const flagCheck = checkNameFlagged(username);
+
+          unified.push({
+            cleanId,
+            username,
+            email: `${cleanId}@pixelwar.com`,
+            level,
+            xp,
+            stars,
+            diamonds,
+            wins,
+            losses,
+            lastSeen,
+            isOnline,
+            status,
+            banReason,
+            bannedUntil,
+            bannedAt,
+            isFlagged: flagCheck.isFlagged,
+            flagMatches: flagCheck.matches,
+            resetPending: Boolean(acc.resetPending)
+          });
+        });
+
+        return unified;
+      }
+
+      /* =========================================================================
+         RENDER KPI CARDS, ROSTER TABLE, AND BANNED REGISTRY
+         ========================================================================= */
+      function renderAll() {
+        const players = getUnifiedPlayers();
+
+        const totalCount = players.length;
+        const onlineCount = players.filter(p => p.isOnline && p.status === "active").length;
+        const activeCount = players.filter(p => p.status === "active").length;
+        const bannedOrSuspended = players.filter(p => p.status === "banned" || p.status === "suspended");
+        const flaggedCount = players.filter(p => p.isFlagged).length;
+
+        document.getElementById("kpi-total-players").textContent = totalCount.toLocaleString();
+        document.getElementById("kpi-online-players").textContent = onlineCount.toLocaleString();
+        document.getElementById("kpi-active-players").textContent = activeCount.toLocaleString();
+        document.getElementById("kpi-banned-players").textContent = bannedOrSuspended.length.toLocaleString();
+        document.getElementById("kpi-flagged-players").textContent = flaggedCount.toLocaleString();
+
+        document.getElementById("tab-count-all").textContent = totalCount;
+        document.getElementById("tab-count-bans").textContent = bannedOrSuspended.length;
+        document.getElementById("total-roster-count").textContent = totalCount;
+
+        // Filter Players
+        const q = currentSearch.trim().toLowerCase();
+        let filtered = players.filter(p => {
+          if (currentFilter === "online" && !p.isOnline) return false;
+          if (currentFilter === "active" && p.status !== "active") return false;
+          if (currentFilter === "banned_suspended" && p.status !== "banned" && p.status !== "suspended") return false;
+          if (currentFilter === "banned" && p.status !== "banned") return false;
+          if (currentFilter === "suspended" && p.status !== "suspended") return false;
+          if (currentFilter === "flagged" && !p.isFlagged) return false;
+
+          if (q) {
+            const hay = `${p.username} ${p.cleanId} ${p.email} ${p.banReason} ${p.status}`.toLowerCase();
+            if (!hay.includes(q)) return false;
+          }
+          return true;
+        });
+
+        // Sort Players
+        filtered.sort((a, b) => {
+          if (currentSort === "level_desc") return (b.level - a.level) || (b.xp - a.xp);
+          if (currentSort === "stars_desc") return b.stars - a.stars;
+          if (currentSort === "wins_desc") return b.wins - a.wins;
+          if (currentSort === "name_asc") return a.username.localeCompare(b.username);
+          // Default: Online first, then most recently seen
+          if (a.isOnline !== b.isOnline) return a.isOnline ? -1 : 1;
+          return (b.lastSeen || 0) - (a.lastSeen || 0);
+        });
+
+        document.getElementById("visible-roster-count").textContent = filtered.length;
+
+        renderRosterTable(filtered);
+        renderBannedRegistry(bannedOrSuspended);
+      }
+
+      function renderRosterTable(list) {
+        const tbody = document.getElementById("roster-tbody");
+        if (!tbody) return;
+
+        if (list.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="7" class="empty-state">
+                <div class="empty-state-title">No Matching Commanders Found</div>
+                <div>Try clearing your search query or switching the active filter tab.</div>
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        tbody.innerHTML = list.map(p => {
+          const initials = escapeHtml(p.username.slice(0, 2).toUpperCase());
+          const rowClass = p.status === "banned"
+            ? "row-banned"
+            : (p.status === "suspended" ? "row-suspended" : (p.isFlagged ? "row-flagged" : ""));
+
+          let statusBadgeHtml = "";
+          if (p.status === "banned") {
+            statusBadgeHtml = `
+              <span class="status-badge badge-banned">
+                <svg class="svg-icon" style="width:12px;height:12px;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg>
+                <span>BANNED</span>
+              </span>
+              <div style="font-size:11.5px; color:#fca5a5; margin-top:4px;">${escapeHtml(p.banReason)}</div>
+            `;
+          } else if (p.status === "suspended") {
+            statusBadgeHtml = `
+              <span class="status-badge badge-suspended">
+                <svg class="svg-icon" style="width:12px;height:12px;" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+                <span>SUSPENDED (${escapeHtml(formatRemainingTime(p.bannedUntil))})</span>
+              </span>
+              <div style="font-size:11.5px; color:#fde68a; margin-top:4px;">${escapeHtml(p.banReason)}</div>
+            `;
+          } else if (p.isOnline) {
+            statusBadgeHtml = `
+              <span class="status-badge badge-online">
+                <span class="pulse-dot"></span>
+                <span>ONLINE NOW</span>
+              </span>
+            `;
+          } else {
+            statusBadgeHtml = `
+              <span class="status-badge badge-active">
+                <span>ACTIVE</span>
+              </span>
+            `;
+          }
+
+          if (p.isFlagged) {
+            statusBadgeHtml += `
+              <div style="margin-top:4px;">
+                <span class="status-badge badge-flagged">FLAGGED NAME: ${escapeHtml(p.flagMatches.join(", "))}</span>
+              </div>
+            `;
+          }
+
+          const banOrUnbanBtn = (p.status === "banned" || p.status === "suspended")
+            ? `<button type="button" class="pixel-btn pixel-btn-green pixel-btn-sm" data-action="unban" data-id="${escapeHtml(p.cleanId)}">
+                 <svg class="svg-icon" style="width:12px;height:12px;" viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>
+                 <span>Unban</span>
+               </button>`
+            : `<button type="button" class="pixel-btn pixel-btn-red pixel-btn-sm" data-action="ban" data-id="${escapeHtml(p.cleanId)}">
+                 <svg class="svg-icon" style="width:12px;height:12px;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg>
+                 <span>Ban / Suspend</span>
+               </button>`;
+
+          return `
+            <tr class="${rowClass}">
+              <td>
+                <div class="commander-cell">
+                  <div class="commander-avatar">
+                    <span>${initials}</span>
+                    <span class="online-indicator ${p.isOnline ? 'is-online' : ''}"></span>
+                  </div>
+                  <div>
+                    <div class="commander-name">${escapeHtml(p.username)}</div>
+                    <div class="commander-id">ID: ${escapeHtml(p.cleanId)} • ${escapeHtml(p.email)}</div>
+                  </div>
+                </div>
+              </td>
+              <td>${statusBadgeHtml}</td>
+              <td>
+                <span class="level-pill">LV.${p.level}</span>
+                <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">${p.xp.toLocaleString()} XP</div>
+              </td>
+              <td>
+                <div class="res-cluster">
+                  <span class="res-item" style="color:#fbbf24;" title="Stars">
+                    <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                    <span>${p.stars.toLocaleString()}</span>
+                  </span>
+                  <span class="res-item" style="color:#38bdf8;" title="Diamonds">
+                    <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 3H5L2 9l10 12L22 9l-3-6zM9.62 8l1.5-3h1.76l1.5 3H9.62zM11 10v6.68L5.44 10H11zm2 0h5.56L13 16.68V10z"/></svg>
+                    <span>${p.diamonds.toLocaleString()}</span>
+                  </span>
+                </div>
+              </td>
+              <td>
+                <div style="font-family:var(--font-pixel-display); font-size:10.5px;">
+                  <span style="color:#34d399;">${p.wins}W</span> / <span style="color:#f87171;">${p.losses}L</span>
+                </div>
+              </td>
+              <td>
+                <div style="font-size:13px; color:#e2e8f0;">${p.isOnline ? 'Online Now' : escapeHtml(formatTimeAgo(p.lastSeen))}</div>
+              </td>
+              <td>
+                <div class="action-cluster">
+                  <button type="button" class="pixel-btn pixel-btn-blue pixel-btn-sm" data-action="edit" data-id="${escapeHtml(p.cleanId)}">
+                    <svg class="svg-icon" style="width:12px;height:12px;" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                    <span>Edit / Rename</span>
+                  </button>
+                  <button type="button" class="pixel-btn pixel-btn-orange pixel-btn-sm" data-action="reset" data-id="${escapeHtml(p.cleanId)}">
+                    <svg class="svg-icon" style="width:12px;height:12px;" viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                    <span>Reset</span>
+                  </button>
+                  <button type="button" class="pixel-btn pixel-btn-slate pixel-btn-sm" data-action="remove" data-id="${escapeHtml(p.cleanId)}" title="Remove account without banning">
+                    <svg class="svg-icon" style="width:12px;height:12px;color:#f87171;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    <span>Remove</span>
+                  </button>
+                  ${banOrUnbanBtn}
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join("");
+      }
+
+      function renderBannedRegistry(bannedList) {
+        const container = document.getElementById("banned-registry-list");
+        if (!container) return;
+
+        if (bannedList.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-state-title">No Banned or Suspended Accounts</div>
+              <div>All registered Commanders are currently in good standing.</div>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = bannedList.map(p => {
+          const isSusp = p.status === "suspended";
+          return `
+            <div class="ban-item-card ${isSusp ? 'is-suspended' : ''}">
+              <div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-family:var(--font-pixel-display); font-size:13px; color:#ffffff;">${escapeHtml(p.username)}</span>
+                  <span class="status-badge ${isSusp ? 'badge-suspended' : 'badge-banned'}">
+                    ${isSusp ? 'SUSPENDED (' + escapeHtml(formatRemainingTime(p.bannedUntil)) + ')' : 'PERMANENTLY BANNED'}
+                  </span>
+                </div>
+                <div style="font-size:13px; color:#fca5a5; margin-top:4px;">Reason: ${escapeHtml(p.banReason)}</div>
+                <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">Account ID: ${escapeHtml(p.cleanId)} • Restricted ${escapeHtml(formatTimeAgo(p.bannedAt))}</div>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button type="button" class="pixel-btn pixel-btn-slate pixel-btn-sm" data-action="remove" data-id="${escapeHtml(p.cleanId)}">
+                  <svg class="svg-icon" style="width:12px;height:12px;color:#f87171;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                  <span>Remove Account</span>
+                </button>
+                <button type="button" class="pixel-btn pixel-btn-green pixel-btn-sm" data-action="unban" data-id="${escapeHtml(p.cleanId)}">
+                  <svg class="svg-icon" style="width:12px;height:12px;" viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>
+                  <span>Restore / Unban Account</span>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join("");
+      }
+
+      function renderBadWords() {
+        const box = document.getElementById("badwords-tag-list");
+        if (!box) return;
+        box.innerHTML = badWordsList.map(w => `
+          <span class="word-tag">
+            <span>${escapeHtml(w)}</span>
+            <button type="button" data-remove-word="${escapeHtml(w)}" title="Remove">X</button>
+          </span>
+        `).join("");
+      }
+
+      function renderAuditLogs() {
+        const box = document.getElementById("audit-log-list");
+        if (!box) return;
+        if (!cloudAuditLogs.length) {
+          box.innerHTML = `<div class="empty-state"><div class="empty-state-title">No Moderation Actions Logged Yet</div></div>`;
+          return;
+        }
+        box.innerHTML = cloudAuditLogs.slice(0, 60).map(item => `
+          <div style="background:#080f1d; border:2px solid #1e2c47; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+            <div>
+              <div style="font-family:var(--font-pixel-display); font-size:10.5px; color:var(--accent-cyan);">${escapeHtml(item.action || 'ACTION')} — ${escapeHtml(item.target || '')}</div>
+              <div style="font-size:13px; color:#e2e8f0; margin-top:3px;">${escapeHtml(item.details || '')}</div>
+            </div>
+            <div style="font-size:11.5px; color:var(--text-muted); white-space:nowrap;">${escapeHtml(formatTimeAgo(item.timestamp))}</div>
+          </div>
+        `).join("");
+      }
+
+      async function pushAuditLog(action, target, details) {
+        const entry = {
+          action,
+          target,
+          details,
+          timestamp: Date.now()
+        };
+        if (rtdb) {
+          try {
+            await rtdb.ref("pixelwar_audit_logs").push(entry);
+          } catch (e) {}
+        }
+      }
+
+      /* =========================================================================
+         FIREBASE REALTIME DATABASE LISTENERS & ACTIONS
+         ========================================================================= */
+      function initFirebaseRealtimeListeners() {
+        try {
+          if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+          }
+          rtdb = firebase.database();
+
+          const pill = document.getElementById("rtdb-status-pill");
+          const statusText = document.getElementById("rtdb-status-text");
+
+          rtdb.ref(".info/connected").on("value", (snap) => {
+            isConnected = Boolean(snap.val());
+            if (isConnected) {
+              pill.classList.remove("offline");
+              statusText.textContent = "LIVE FIREBASE RTDB CONNECTED";
+            } else {
+              pill.classList.add("offline");
+              statusText.textContent = "RECONNECTING TO CLOUD...";
+            }
+          });
+
+          rtdb.ref("pixelwar_accounts").on("value", (snap) => {
+            cloudAccountsMap = snap.val() || {};
+            renderAll();
+          });
+
+          rtdb.ref("pixelwar_directory").on("value", (snap) => {
+            cloudDirectoryMap = snap.val() || {};
+            renderAll();
+          });
+
+          rtdb.ref("pixelwar_presence").on("value", (snap) => {
+            cloudPresenceMap = snap.val() || {};
+            renderAll();
+          });
+
+          rtdb.ref("pixelwar_bans").on("value", (snap) => {
+            cloudBansMap = snap.val() || {};
+            renderAll();
+          });
+
+          rtdb.ref("pixelwar_moderation_config/badWords").on("value", (snap) => {
+            const val = snap.val();
+            if (Array.isArray(val) && val.length > 0) {
+              badWordsList = val;
+            }
+            renderBadWords();
+            renderAll();
+          });
+
+          rtdb.ref("pixelwar_audit_logs").limitToLast(60).on("value", (snap) => {
+            const val = snap.val() || {};
+            cloudAuditLogs = Object.values(val).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            renderAuditLogs();
+          });
+        } catch (err) {
+          console.error("Firebase Admin Init Error:", err);
+        }
+      }
+
+      /* =========================================================================
+         MODERATION OPERATIONS (BAN, UNBAN, RESET, EDIT, RENAME, DELETE)
+         ========================================================================= */
+      function openBanModal(cleanId) {
+        const players = getUnifiedPlayers();
+        const found = players.find(p => p.cleanId === cleanId);
+        activeModalCleanId = cleanId || "";
+        const inp = document.getElementById("ban-target-username");
+        inp.value = found ? found.username : (cleanId || "");
+        document.getElementById("ban-custom-reason").value = "Inappropriate or Offensive Username";
+        document.getElementById("ban-also-wipe").checked = false;
+        document.getElementById("modal-ban").style.display = "flex";
+      }
+
+      async function executeBanOrSuspend() {
+        const rawTarget = document.getElementById("ban-target-username").value.trim();
+        const cleanId = toCleanId(rawTarget);
+        if (!cleanId) {
+          showToast("Please enter a valid username to ban.", "var(--accent-red)");
+          return;
+        }
+
+        const actionType = document.getElementById("ban-action-type").value;
+        const reason = document.getElementById("ban-custom-reason").value.trim() || "Violation of Community Guidelines";
+        const alsoWipe = document.getElementById("ban-also-wipe").checked;
+
+        const now = Date.now();
+        let status = "banned";
+        let bannedUntil = null;
+
+        if (actionType === "suspended_1h") {
+          status = "suspended";
+          bannedUntil = now + 3600 * 1000;
+        } else if (actionType === "suspended_24h") {
+          status = "suspended";
+          bannedUntil = now + 24 * 3600 * 1000;
+        } else if (actionType === "suspended_7d") {
+          status = "suspended";
+          bannedUntil = now + 7 * 24 * 3600 * 1000;
+        } else if (actionType === "suspended_30d") {
+          status = "suspended";
+          bannedUntil = now + 30 * 24 * 3600 * 1000;
+        }
+
+        const existingAcc = cloudAccountsMap[cleanId] || {};
+        const canonicalName = existingAcc.username || rawTarget;
+
+        const banRecord = {
+          cleanId,
+          username: canonicalName,
+          isBanned: true,
+          status,
+          reason,
+          bannedAt: now,
+          bannedUntil
+        };
+
+        const accountPatch = {
+          username: canonicalName,
+          status,
+          banned: true,
+          banReason: reason,
+          bannedAt: now,
+          bannedUntil,
+          updatedAt: now
+        };
+
+        if (alsoWipe) {
+          accountPatch.stars = 0;
+          accountPatch.diamonds = 0;
+          accountPatch.wins = 0;
+          accountPatch.losses = 0;
+          accountPatch.playerLevel = 1;
+          accountPatch.xp = 0;
+          accountPatch.adminOverrideAt = now;
+        }
+
+        try {
+          if (rtdb) {
+            await Promise.all([
+              rtdb.ref(`pixelwar_bans/${cleanId}`).set(banRecord),
+              rtdb.ref(`pixelwar_accounts/${cleanId}`).update(accountPatch),
+              rtdb.ref(`pixelwar_presence/${cleanId}`).remove()
+            ]);
+          }
+          await pushAuditLog(
+            status === "suspended" ? "SUSPENDED ACCOUNT" : "BANNED ACCOUNT",
+            canonicalName,
+            `Reason: ${reason}${alsoWipe ? " (Progression Wiped)" : ""}`
+          );
+          document.getElementById("modal-ban").style.display = "none";
+          showToast(`${canonicalName} has been ${status}.`, "var(--accent-red)");
+        } catch (e) {
+          showToast("Error writing ban to Firebase RTDB.", "var(--accent-red)");
+        }
+      }
+
+      async function executeUnban(cleanId) {
+        if (!cleanId) return;
+        const existingAcc = cloudAccountsMap[cleanId] || {};
+        const name = existingAcc.username || cloudBansMap[cleanId]?.username || cleanId;
+        const now = Date.now();
+
+        try {
+          if (rtdb) {
+            await Promise.all([
+              rtdb.ref(`pixelwar_bans/${cleanId}`).remove(),
+              rtdb.ref(`pixelwar_accounts/${cleanId}`).update({
+                status: "active",
+                banned: false,
+                banReason: null,
+                bannedUntil: null,
+                updatedAt: now
+              })
+            ]);
+          }
+          await pushAuditLog("RESTORED ACCOUNT", name, "Ban/Suspension lifted by Administrator");
+          showToast(`${name} has been unbanned and restored!`, "var(--accent-green)");
+        } catch (e) {
+          showToast("Failed to unban account.", "var(--accent-red)");
+        }
+      }
+
+      function openResetModal(cleanId) {
+        const players = getUnifiedPlayers();
+        const found = players.find(p => p.cleanId === cleanId);
+        if (!found) return;
+        activeModalCleanId = cleanId;
+        document.getElementById("reset-target-display").textContent = `${found.username} (ID: ${found.cleanId} • Lv.${found.level})`;
+        document.getElementById("reset-wipe-progression").checked = true;
+        document.getElementById("reset-new-password").value = "";
+        document.getElementById("modal-reset").style.display = "flex";
+      }
+
+      async function executeAccountReset() {
+        const cleanId = activeModalCleanId;
+        if (!cleanId) return;
+        const wipeStats = document.getElementById("reset-wipe-progression").checked;
+        const newPass = document.getElementById("reset-new-password").value.trim();
+
+        const existingAcc = cloudAccountsMap[cleanId] || {};
+        const username = existingAcc.username || cloudDirectoryMap[cleanId]?.username || cleanId;
+        const now = Date.now();
+
+        const patch = {
+          username,
+          updatedAt: now,
+          adminOverrideAt: now
+        };
+
+        if (wipeStats) {
+          patch.stars = 0;
+          patch.diamonds = 0;
+          patch.wins = 0;
+          patch.losses = 0;
+          patch.playerLevel = 1;
+          patch.xp = 0;
+          patch.crateUpgrades = { Money: 1, Military: 1, Water: 1, Docks: 1, Artillery: 1 };
+          patch.ownedItems = {
+            gold_mine: { level: 1, cards: 0 },
+            central_bank: { level: 1, cards: 0 },
+            barracks: { level: 1, cards: 0 },
+            fortress: { level: 1, cards: 0 },
+            naval_dock: { level: 1, cards: 0 },
+            shipyard: { level: 1, cards: 0 },
+            howitzer_battery: { level: 1, cards: 0 },
+            railgun_tower: { level: 1, cards: 0 },
+            gunboat: { level: 1, cards: 0 },
+            battleship: { level: 1, cards: 0 },
+            cruise_missile: { level: 1, cards: 0 },
+            tsar_warhead: { level: 1, cards: 0 }
+          };
+          patch.unlockedColors = ["sky_blue"];
+          patch.equippedColor = "sky_blue";
+          patch.unlockedPatterns = ["solid"];
+          patch.equippedPattern = "solid";
+        }
+
+        if (newPass) {
+          patch.resetPending = true;
+          patch.resetPassword = newPass;
+        }
+
+        try {
+          if (rtdb) {
+            await rtdb.ref(`pixelwar_accounts/${cleanId}`).update(patch);
+            if (wipeStats) {
+              await rtdb.ref(`pixelwar_directory/${cleanId}`).update({
+                username,
+                cleanId,
+                level: 1,
+                lastSeen: now
+              });
+            }
+          }
+          // Also update localStorage if present on this device
+          try {
+            const localKey = "pixelwar_acct_" + cleanId;
+            if (localStorage.getItem(localKey)) {
+              localStorage.setItem(localKey, JSON.stringify({ ...(cloudAccountsMap[cleanId] || {}), ...patch }));
+            }
+          } catch (e) {}
+
+          const detailsParts = [];
+          if (wipeStats) detailsParts.push("Progression reset to Lv.1 / 0 resources");
+          if (newPass) detailsParts.push("Assigned new password override");
+          await pushAuditLog("RESET ACCOUNT", username, detailsParts.join(" + ") || "Account updated");
+
+          document.getElementById("modal-reset").style.display = "none";
+          showToast(`Account ${username} has been reset in Cloud!`, "var(--accent-gold)");
+        } catch (e) {
+          showToast("Error resetting account.", "var(--accent-red)");
+        }
+      }
+
+      function openEditModal(cleanId) {
+        const players = getUnifiedPlayers();
+        const found = players.find(p => p.cleanId === cleanId);
+        if (!found) return;
+        activeModalCleanId = cleanId;
+        document.getElementById("edit-username-input").value = found.username;
+        document.getElementById("edit-level-input").value = found.level;
+        document.getElementById("edit-xp-input").value = found.xp;
+        document.getElementById("edit-stars-input").value = found.stars;
+        document.getElementById("edit-diamonds-input").value = found.diamonds;
+        document.getElementById("edit-wins-input").value = found.wins;
+        document.getElementById("edit-losses-input").value = found.losses;
+        document.getElementById("modal-edit").style.display = "flex";
+      }
+
+      async function executeSaveEdit() {
+        const oldCleanId = activeModalCleanId;
+        if (!oldCleanId) return;
+
+        const newUsername = document.getElementById("edit-username-input").value.trim();
+        const newCleanId = toCleanId(newUsername);
+        if (!newUsername || !newCleanId) {
+          showToast("Please enter a valid username.", "var(--accent-red)");
+          return;
+        }
+
+        const level = Math.max(1, parseInt(document.getElementById("edit-level-input").value, 10) || 1);
+        const xp = Math.max(0, parseInt(document.getElementById("edit-xp-input").value, 10) || 0);
+        const stars = Math.max(0, parseInt(document.getElementById("edit-stars-input").value, 10) || 0);
+        const diamonds = Math.max(0, parseInt(document.getElementById("edit-diamonds-input").value, 10) || 0);
+        const wins = Math.max(0, parseInt(document.getElementById("edit-wins-input").value, 10) || 0);
+        const losses = Math.max(0, parseInt(document.getElementById("edit-losses-input").value, 10) || 0);
+        const now = Date.now();
+
+        const baseAcc = cloudAccountsMap[oldCleanId] || {};
+        const updatedPayload = {
+          ...baseAcc,
+          username: newUsername,
+          playerLevel: level,
+          xp,
+          stars,
+          diamonds,
+          wins,
+          losses,
+          adminOverrideAt: now,
+          updatedAt: now
+        };
+
+        try {
+          if (rtdb) {
+            if (newCleanId !== oldCleanId) {
+              // Migrate account to new clean ID and remove old inappropriate key
+              await Promise.all([
+                rtdb.ref(`pixelwar_accounts/${newCleanId}`).set(updatedPayload),
+                rtdb.ref(`pixelwar_directory/${newCleanId}`).set({
+                  username: newUsername,
+                  cleanId: newCleanId,
+                  level,
+                  lastSeen: now
+                }),
+                rtdb.ref(`pixelwar_accounts/${oldCleanId}`).remove(),
+                rtdb.ref(`pixelwar_directory/${oldCleanId}`).remove(),
+                rtdb.ref(`pixelwar_presence/${oldCleanId}`).remove()
+              ]);
+              await pushAuditLog("RENAMED & UPDATED", `${oldCleanId} -> ${newUsername}`, `Lv.${level}, ${stars} Stars, ${diamonds} Diamonds`);
+            } else {
+              await Promise.all([
+                rtdb.ref(`pixelwar_accounts/${oldCleanId}`).update(updatedPayload),
+                rtdb.ref(`pixelwar_directory/${oldCleanId}`).update({
+                  username: newUsername,
+                  cleanId: oldCleanId,
+                  level,
+                  lastSeen: now
+                })
+              ]);
+              await pushAuditLog("EDITED STATS", newUsername, `Lv.${level}, ${stars} Stars, ${diamonds} Diamonds, ${wins}W/${losses}L`);
+            }
+          }
+          document.getElementById("modal-edit").style.display = "none";
+          showToast(`Saved changes for ${newUsername} to Firebase Cloud!`, "var(--accent-cyan)");
+        } catch (e) {
+          showToast("Failed to save account edits.", "var(--accent-red)");
+        }
+      }
+
+      async function executeRemoveAccount(targetId) {
+        const cleanId = toCleanId(targetId || activeModalCleanId);
+        if (!cleanId) return;
+        const name = cloudAccountsMap[cleanId]?.username || cloudDirectoryMap[cleanId]?.username || cloudBansMap[cleanId]?.username || cleanId;
+
+        try {
+          if (rtdb) {
+            await Promise.all([
+              rtdb.ref(`pixelwar_accounts/${cleanId}`).remove(),
+              rtdb.ref(`pixelwar_directory/${cleanId}`).remove(),
+              rtdb.ref(`pixelwar_presence/${cleanId}`).remove(),
+              rtdb.ref(`pixelwar_friends/${cleanId}`).remove(),
+              rtdb.ref(`pixelwar_invites/${cleanId}`).remove(),
+              rtdb.ref(`pixelwar_bans/${cleanId}`).remove()
+            ]);
+          }
+          try {
+            localStorage.removeItem("pixelwar_acct_" + cleanId);
+            const rem = localStorage.getItem("pixelwar_remembered_user");
+            if (rem && toCleanId(rem) === cleanId) {
+              localStorage.removeItem("pixelwar_remembered_user");
+            }
+          } catch (e) {}
+
+          delete cloudAccountsMap[cleanId];
+          delete cloudDirectoryMap[cleanId];
+          delete cloudPresenceMap[cleanId];
+          delete cloudBansMap[cleanId];
+          renderAll();
+
+          await pushAuditLog("REMOVED ACCOUNT", name, `Removed account ${cleanId} (not banned)`);
+          document.getElementById("modal-edit").style.display = "none";
+          showToast(`Removed account ${name}.`, "var(--accent-cyan)");
+        } catch (e) {
+          showToast("Failed to remove account.", "var(--accent-red)");
+        }
+      }
+
+      /* =========================================================================
+         EVENT BINDINGS & GATE INITIALIZATION
+         ========================================================================= */
+      function unlockAdminConsole() {
+        try {
+          sessionStorage.setItem(SESSION_UNLOCK_KEY, "1");
+        } catch (e) {}
+        document.getElementById("admin-gate-overlay").style.display = "none";
+        document.getElementById("admin-app").style.display = "flex";
+        initFirebaseRealtimeListeners();
+        renderBadWords();
+      }
+
+      function setupEvents() {
+        const gateInp = document.getElementById("gate-passcode-input");
+        const gateBtn = document.getElementById("btn-gate-unlock");
+        const gateErr = document.getElementById("gate-error-box");
+
+        function tryUnlock() {
+          const val = gateInp.value.trim();
+          if (val === ADMIN_CODE) {
+            gateErr.style.display = "none";
+            gateInp.value = "";
+            unlockAdminConsole();
+          } else {
+            gateErr.style.display = "block";
+            gateInp.value = "";
+            gateInp.focus();
+          }
+        }
+
+        gateBtn.addEventListener("click", tryUnlock);
+        gateInp.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") tryUnlock();
+        });
+
+        try {
+          if (sessionStorage.getItem(SESSION_UNLOCK_KEY) === "1") {
+            unlockAdminConsole();
+          }
+        } catch (e) {}
+
+        document.getElementById("btn-lock-console").addEventListener("click", () => {
+          try { sessionStorage.removeItem(SESSION_UNLOCK_KEY); } catch (e) {}
+          document.getElementById("admin-app").style.display = "none";
+          document.getElementById("admin-gate-overlay").style.display = "flex";
+        });
+
+        document.getElementById("btn-refresh-cloud").addEventListener("click", () => {
+          renderAll();
+          showToast("Synced live player state from Firebase RTDB.");
+        });
+
+        document.getElementById("btn-direct-ban-open").addEventListener("click", () => openBanModal(""));
+        document.getElementById("btn-ban-modal-from-tab").addEventListener("click", () => openBanModal(""));
+
+        // View Tabs
+        document.querySelectorAll("[data-view-tab]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            document.querySelectorAll("[data-view-tab]").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            const tab = btn.getAttribute("data-view-tab");
+            document.getElementById("view-roster").style.display = tab === "roster" ? "flex" : "none";
+            document.getElementById("view-bans").style.display = tab === "bans" ? "flex" : "none";
+            document.getElementById("view-filter").style.display = tab === "filter" ? "grid" : "none";
+          });
+        });
+
+        // KPI Quick Filter Cards
+        document.querySelectorAll("[data-quick-filter]").forEach(card => {
+          card.addEventListener("click", () => {
+            const f = card.getAttribute("data-quick-filter");
+            currentFilter = f;
+            document.querySelectorAll("[data-quick-filter]").forEach(c => c.classList.remove("active-card"));
+            card.classList.add("active-card");
+            document.querySelectorAll("#roster-filter-pills .filter-pill").forEach(p => {
+              p.classList.toggle("active", p.getAttribute("data-filter") === f);
+            });
+            // Ensure roster tab is visible
+            document.querySelector('[data-view-tab="roster"]').click();
+            renderAll();
+          });
+        });
+
+        // Filter Pills
+        document.querySelectorAll("#roster-filter-pills .filter-pill").forEach(pill => {
+          pill.addEventListener("click", () => {
+            currentFilter = pill.getAttribute("data-filter");
+            document.querySelectorAll("#roster-filter-pills .filter-pill").forEach(p => p.classList.remove("active"));
+            pill.classList.add("active");
+            renderAll();
+          });
+        });
+
+        // Search & Sort
+        document.getElementById("roster-search-input").addEventListener("input", (e) => {
+          currentSearch = e.target.value;
+          renderAll();
+        });
+
+        document.getElementById("roster-sort-select").addEventListener("change", (e) => {
+          currentSort = e.target.value;
+          renderAll();
+        });
+
+        // Delegated Table & Registry Actions
+        document.body.addEventListener("click", (e) => {
+          const actionBtn = e.target.closest("[data-action]");
+          if (actionBtn) {
+            const action = actionBtn.getAttribute("data-action");
+            const cid = actionBtn.getAttribute("data-id");
+            if (action === "ban") openBanModal(cid);
+            if (action === "unban") executeUnban(cid);
+            if (action === "reset") openResetModal(cid);
+            if (action === "edit") openEditModal(cid);
+            if (action === "remove") executeRemoveAccount(cid);
+          }
+
+          const closeBtn = e.target.closest("[data-close-modal]");
+          if (closeBtn) {
+            const mId = closeBtn.getAttribute("data-close-modal");
+            document.getElementById(mId).style.display = "none";
+          }
+
+          const removeWordBtn = e.target.closest("[data-remove-word]");
+          if (removeWordBtn) {
+            const wordToRemove = removeWordBtn.getAttribute("data-remove-word");
+            badWordsList = badWordsList.filter(w => w !== wordToRemove);
+            if (rtdb) rtdb.ref("pixelwar_moderation_config/badWords").set(badWordsList).catch(() => {});
+            renderBadWords();
+            renderAll();
+          }
+        });
+
+        // Modal Preset Sync
+        document.getElementById("ban-reason-preset").addEventListener("change", (e) => {
+          document.getElementById("ban-custom-reason").value = e.target.value;
+        });
+
+        document.getElementById("btn-confirm-ban").addEventListener("click", executeBanOrSuspend);
+        document.getElementById("btn-confirm-reset").addEventListener("click", executeAccountReset);
+        document.getElementById("btn-save-edit").addEventListener("click", executeSaveEdit);
+        document.getElementById("btn-delete-account").addEventListener("click", () => executeRemoveAccount(activeModalCleanId));
+
+        // Add Bad Word
+        document.getElementById("btn-add-badword").addEventListener("click", () => {
+          const inp = document.getElementById("new-badword-input");
+          const w = inp.value.trim().toLowerCase();
+          if (w && !badWordsList.includes(w)) {
+            badWordsList.push(w);
+            if (rtdb) rtdb.ref("pixelwar_moderation_config/badWords").set(badWordsList).catch(() => {});
+            inp.value = "";
+            renderBadWords();
+            renderAll();
+            showToast(`Added "${w}" to username filter.`);
+          }
+        });
+
+        // Clear Audit Logs
+        document.getElementById("btn-clear-logs").addEventListener("click", async () => {
+          if (rtdb) {
+            await rtdb.ref("pixelwar_audit_logs").remove().catch(() => {});
+          }
+          cloudAuditLogs = [];
+          renderAuditLogs();
+          showToast("Cleared moderation audit log.");
+        });
+      }
+
+      setupEvents();
+    })();
+  </script>
+</body>
+</html>
